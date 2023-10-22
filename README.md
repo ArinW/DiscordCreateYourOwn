@@ -20,6 +20,7 @@ cd Discord-Bot-GPT4
 
 ### Create a Virtual Environment: 
 ```python3 -m venv env```
+
 create an empty file called ```.env``` and put your token and openai api key in it DISCORD_TOKEN=& API_Key=
 
 ### Activate the Virtual Environment:
