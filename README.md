@@ -1,6 +1,6 @@
 # DiscordCreateYourOwn
 
-Welcome to the DiscordCreateYourOwn repository. 
+Welcome to the DiscordCreateYourOwn repository. createyourown.py creates a new bot with a customized name, personality, and avatar. newbot.py can change bots' names and avatars according to the previous setting. The way to run them is similar.
 
 ## Prerequisites
 
