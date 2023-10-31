@@ -14,7 +14,7 @@ Follow the steps below to set up the development environment:
 
 Clone this repository to your local machine using:
 ```bash
-git clone https://github.com/[YourUsername]/Discord-Bot-GPT4.git
+git clone 
 cd Discord-Bot-GPT4
 ```
 
