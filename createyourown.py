@@ -71,10 +71,14 @@ async def on_message(message):
     if message.author.bot:
         return
     
-    # Check if the bot is mentioned without mentioning others
-    if bot.user.mentioned_in(message) and len(message.mentions) == 1:
+    # Check if the bot is mentioned
+    mentions = message.mentions
+    is_bot_mentioned = any(user.id == bot.user.id for user in mentions)
+    # Check if only the bot is mentioned and not "@everyone" or "@here"
+    if is_bot_mentioned and len(mentions) == 1 and not message.mention_everyone:
         user_id = message.author.id
         user_data[user_id] = {"step": 0, "answers": []}
+
 
         await message.author.send(
             "🎉 Welcome! 🎉 \n Let's create your Odo 🤖 (an AI character, AI friend)). \n" + questions[0]
@@ -83,102 +87,106 @@ async def on_message(message):
         #await message.author.send(f"Example answer: '{example_answers[0]}' \n Type `auto` if you'd like me to complete the answer for you. ")
         await message.channel.send(f"{message.author.mention}, I've sent you a DM with more information!")
         return
-    
-    user_id = message.author.id
-    if user_id in user_data and user_data[user_id]["step"] < len(questions):
-        if 'auto' in message.content.lower():
-            # Generate the appropriate prompt for the current step
-            if user_data[user_id]["step"] == 0:
-                prompt = "Generate a name."
-                # Show typing indicator while generating answer
-                async with message.channel.typing():
-                    answer = await generate_answer(prompt)
+    if isinstance(message.channel, discord.channel.DMChannel):
+        user_id = message.author.id
+        if user_id in user_data and user_data[user_id]["step"] < len(questions):
+            if 'auto' in message.content.lower():
+                # Generate the appropriate prompt for the current step
+                if user_data[user_id]["step"] == 0:
+                    prompt = "Generate a name."
+                    # Show typing indicator while generating answer
+                    async with message.channel.typing():
+                        answer = await generate_answer(prompt)
 
-                user_data[user_id]["answers"].append(answer)
-                user_data[user_id]["step"] += 1
-                # print(user_data[user_id]["answers"])
-                await message.author.send(f"Answer autofilled with: {answer} \n \n 🚀Moving on.🚀")
+                    user_data[user_id]["answers"].append(answer)
+                    user_data[user_id]["step"] += 1
+                    # print(user_data[user_id]["answers"])
+                    await message.author.send(f"Answer autofilled with: {answer} \n \n 🚀Moving on.🚀")
 
-            elif user_data[user_id]["step"] == 1:
-                prompt = f"Describe personalities and appearance of {user_data[user_id]['answers'][0]}: \nPlease provide an answer in five sentences."
+                elif user_data[user_id]["step"] == 1:
+                    prompt = f"Describe personalities and appearance of {user_data[user_id]['answers'][0]}: \nPlease provide an answer in five sentences."
 
-                # Show typing indicator while generating answer
-                async with message.channel.typing():
-                    answer = await generate_answer(prompt)
+                    # Show typing indicator while generating answer
+                    async with message.channel.typing():
+                        answer = await generate_answer(prompt)
 
-                user_data[user_id]["answers"].append(answer)
-                user_data[user_id]["step"] += 1
-                # print(user_data[user_id]["answers"])
-                await message.author.send(f"Answer autofilled with: {answer} \n \n 🚀Moving on.🚀")
+                    user_data[user_id]["answers"].append(answer)
+                    user_data[user_id]["step"] += 1
+                    # print(user_data[user_id]["answers"])
+                    await message.author.send(f"Answer autofilled with: {answer} \n \n 🚀Moving on.🚀")
 
-            elif user_data[user_id]["step"] == 2:
-                prompt = f"A clear and concise prompt for a avatar with the following property: {user_data[user_id]['answers'][1]} \n Make the prompt for the digital avatar's headshot profile picture for a social media platform. .jpg/.png format"
-                # prompt="cute minimalistic avatar of a smiling young woman with open eyes, looking at the camera, black and white, sharp focus, monochromatic, simple clean line, notion style –q 2 –v 5 –s 750"
-                prompt =await generate_answer(prompt)
-                async with message.channel.typing():
-                    image_url = await generate_image(prompt)
+                elif user_data[user_id]["step"] == 2:
+                    prompt = f"A clear and concise prompt for a avatar with the following property: {user_data[user_id]['answers'][1]} \n Make the prompt for the digital avatar's headshot profile picture for a social media platform. .jpg/.png format"
+                    # prompt="cute minimalistic avatar of a smiling young woman with open eyes, looking at the camera, black and white, sharp focus, monochromatic, simple clean line, notion style –q 2 –v 5 –s 750"
+                    prompt =await generate_answer(prompt)
+                    async with message.channel.typing():
+                        image_url = await generate_image(prompt)
 
-                
-                user_data[user_id]["answers"].append(image_url)
-                await message.author.send(f"Profile picture generated! Here it is: {image_url}")
-                user_data[user_id]["step"] += 1
-                # print(user_data[user_id]["answers"])
-            
-        else:
-            if user_data[user_id]["step"] ==1:
-                async with message.channel.typing():
-                    answer=await generate_answer(str(user_data[user_id]["answers"][0])+"\nPlease provide an answer in five sentences.")
-                user_data[user_id]["answers"].append(answer)
-                user_data[user_id]["step"] += 1
-                # print(user_data[user_id]["answers"])
-            elif user_data[user_id]["step"] ==2:
-                image_url=message.content
-                if image_url.lower().endswith(('.png', '.jpg', '.jpeg')):
+                    
                     user_data[user_id]["answers"].append(image_url)
                     await message.author.send(f"Profile picture generated! Here it is: {image_url}")
                     user_data[user_id]["step"] += 1
-                else:
-                    await message.author.send("Invalid file format. Please upload a JPG file.")
-                user_data[user_id]["answers"].append(message.content)
-                user_data[user_id]["step"] += 1
-            elif user_data[user_id]["step"] == 3:
-                pattern = r"[^@]+@[^@]+\.[^@]+"
-                if re.match(pattern, message.content):
-                    # If valid, proceed to the next step
-                    user_data[user_id]["answers"].append(message.content)
+                    # print(user_data[user_id]["answers"])
+                
+            else:
+                if user_data[user_id]["step"] ==1:
+                    async with message.channel.typing():
+                        answer=await generate_answer(str(user_data[user_id]["answers"][0])+"\nPlease provide an answer in five sentences.")
+                    user_data[user_id]["answers"].append(answer)
                     user_data[user_id]["step"] += 1
                     # print(user_data[user_id]["answers"])
-                else:
-                    # If invalid, ask again until a valid email is provided
-                    await message.author.send("⚠️ The email you provided is invalid. Please make sure it's a correct email address.")
-                    return 
+                elif user_data[user_id]["step"] ==2:
+                    image_url=message.content
+                    if image_url.lower().endswith(('.png', '.jpg', '.jpeg')):
+                        user_data[user_id]["answers"].append(image_url)
+                        await message.author.send(f"Profile picture generated! Here it is: {image_url}")
+                        user_data[user_id]["step"] += 1
+                    else:
+                        await message.author.send("Invalid file format. Please upload a JPG file.")
+                    user_data[user_id]["answers"].append(message.content)
+                    user_data[user_id]["step"] += 1
+                elif user_data[user_id]["step"] == 3:
+                    pattern = r"[^@]+@[^@]+\.[^@]+"
+                    if re.match(pattern, message.content):
+                        # If valid, proceed to the next step
+                        user_data[user_id]["answers"].append(message.content)
+                        user_data[user_id]["step"] += 1
+                        # print(user_data[user_id]["answers"])
+                    else:
+                        # If invalid, ask again until a valid email is provided
+                        await message.author.send("⚠️ The email you provided is invalid. Please make sure it's a correct email address.")
+                        return 
 
+                else:
+                    user_data[user_id]["answers"].append(message.content)
+                    user_data[user_id]["step"] += 1
+                    print(user_data[user_id]["answers"])
+
+            
+            if user_data[user_id]["step"] < len(questions)-1:
+                await message.author.send(questions[user_data[user_id]["step"]])
+                await message.author.send(f"Example answer: '{example_answers[user_data[user_id]['step']]}' \n Type `auto` if you'd like me to complete the answer for you. ")
+                print(user_data[user_id]["answers"])
+            elif user_data[user_id]["step"] == len(questions)-1:
+                await message.author.send(questions[user_data[user_id]["step"]])
+                print(user_data[user_id]["answers"])
             else:
-                user_data[user_id]["answers"].append(message.content)
-                user_data[user_id]["step"] += 1
+                await message.author.send("Congratulations! 🎉 Now you can take your Odo home! ")
                 print(user_data[user_id]["answers"])
 
-        
-        if user_data[user_id]["step"] < len(questions)-1:
-            await message.author.send(questions[user_data[user_id]["step"]])
-            await message.author.send(f"Example answer: '{example_answers[user_data[user_id]['step']]}' \n Type `auto` if you'd like me to complete the answer for you. ")
-            print(user_data[user_id]["answers"])
-        elif user_data[user_id]["step"] == len(questions)-1:
-            await message.author.send(questions[user_data[user_id]["step"]])
-            print(user_data[user_id]["answers"])
-        else:
-            await message.author.send("Congratulations! 🎉 Now you can take your Odo home! ")
-            print(user_data[user_id]["answers"])
 
-            url = "https://testflight.apple.com/join/gaOapjan"  # Replace with your desired URL
-            button = discord.ui.Button(label="Finish Setup", url=url, style=discord.ButtonStyle.link)
-            # button = discord.ui.Button(label="Invite to server", url=url, style=discord.ButtonStyle.link)
-            view = discord.ui.View()
-            view.add_item(button)
-            await message.author.send("Click below to finish setup in the app!", view=view)
-        
-        
-        await call_api(user_id)
+                #run newbot,py
+                url = "https://testflight.apple.com/join/gaOapjan"  # Replace with your desired URL
+                button = discord.ui.Button(label="Finish Setup", url=url, style=discord.ButtonStyle.link)
+                # button = discord.ui.Button(label="Invite to server", url=url, style=discord.ButtonStyle.link)
+                view = discord.ui.View()
+                view.add_item(button)
+                await message.author.send("Click below to finish setup in the app!", view=view)
+                await message.author.send("To invite your bot 🤖, type Invitebot youremail@example.com 📩 here https://discord.com/channels/1118415929630539806/1166544048006365307")
+                
+            
+            
+            await call_api(user_id)
         
         
 
@@ -193,7 +201,7 @@ async def on_message(message):
                 return
 
             async with aiohttp.ClientSession() as session:
-                character_data = await fetch_character_data(session, f'https://emwv7umxn9.us-east-1.awsapprunner.com/bots/user/{user_email}', user_email)
+                character_data = await fetch_character_data(session, f'https://73pm7kwzsz.us-east-1.awsapprunner.com/bots/user/{user_email}', user_email)
                 print(character_data)
 
                 if 'error' in character_data:
@@ -244,7 +252,7 @@ async def call_api(user_id):
     }
     
 
-    url = 'https://emwv7umxn9.us-east-1.awsapprunner.com/bots/create'
+    url = 'https://73pm7kwzsz.us-east-1.awsapprunner.com/bots/create'
     headers =  {
         'Authorization': 'Bearer YOUR_ACCESS_TOKEN',
         'Content-Type': 'application/json',
@@ -289,7 +297,7 @@ async def update_image_data(user_id,data):
 
     }
     print("payload")
-    api_url = f"https://emwv7umxn9.us-east-1.awsapprunner.com/bots/{data['bot']['id']}/replace-image"
+    api_url = f"https://73pm7kwzsz.us-east-1.awsapprunner.com/bots/{data['bot']['id']}/replace-image"
     headers =  {
         'Authorization': 'Bearer YOUR_ACCESS_TOKEN',
         'Content-Type': 'application/json',
@@ -319,9 +327,6 @@ async def get_image(url):
             
             data = await response.read()
             return data
-
-    
-
 
 
 bot.run(token)
